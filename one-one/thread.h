@@ -16,24 +16,24 @@
 typedef struct TCB{
 
     /*pid of thread*/
-    //pid_t pid;
+    pid_t pid;
 
     /*thread id of thread*/
     int tid;
 
     /*Start position of executing function*/
-    //void *(*start_routine) (void *);
+    void *(*start_routine) (void *);
 
     /*Pointer to arguments to the start function*/
-    //void *arg;
+    void *arg;
 
     /*Detach state of thread*/
-   // int detach_state;
+    int detach_state;
 
     /*Pointer to thread stack*/
-    //void *stack;
+    void *stack;
 
     /*Pointer to return vaule of start function*/
-    //void *return_value;
+    void *return_value;
 
 }thread_tcb;
