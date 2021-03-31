@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/types.h>
 
 
 //Stack size of each thread
@@ -18,6 +19,11 @@
 #define JOINABLE 1
 #define DETACHED 2
 
+/*THread status*/
+#define RUNNING 1
+#define RUNABLE 2
+#define TERMINATED 3
+#define WAITING 4
 
 typedef struct TCB{
 
@@ -35,6 +41,9 @@ typedef struct TCB{
 
     /*Detach state of thread*/
     int detach_state;
+
+    /*Status of thread*/
+    int status;
 
     /*Pointer to thread stack*/
     void *stack;
@@ -58,3 +67,4 @@ int isEmpty(Node *head);
 
 int thread_startroutine_execute(void *new_thread);
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg);
+int thread_kill(thread_tcb thread, int sig);

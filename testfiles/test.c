@@ -11,7 +11,7 @@ int main(){
     int a, b;
 
     thread_create(&t1, print, NULL);
-
+    thread_kill(t1, SIGINT);
     sleep(2);
     return 0;
 }
