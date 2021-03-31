@@ -1,6 +1,12 @@
+#define _GNU_SOURCE
+
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <errno.h>
+#include <signal.h>
+
 
 //Stack size of each thread
 #define STACK_SIZE 1024*32
@@ -22,7 +28,7 @@ typedef struct TCB{
     int tid;
 
     /*Start position of executing function*/
-    void *(*start_routine) (void *);
+    void *(*function) (void *);
 
     /*Pointer to arguments to the start function*/
     void *arg;
@@ -37,3 +43,18 @@ typedef struct TCB{
     void *return_value;
 
 }thread_tcb;
+
+/* Node of a doubly linked list */
+typedef struct Node {
+    thread_tcb tcb;
+    struct Node* next; // Pointer to next node in DLL
+    struct Node* prev; // Pointer to previous node in DLL
+}Node;
+
+void add(Node** head, thread_tcb new_tcb);
+thread_tcb* removeNodeWithTid(Node** head, int tid);
+thread_tcb* getNodeUsingTid(Node*head, int tid);
+int isEmpty(Node *head);
+
+int thread_startroutine_execute(void *new_thread);
+int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg);

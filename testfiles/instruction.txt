@@ -1,0 +1,6 @@
+Command to run test files
+
+cc -c dll.c
+cc -c thread.c
+cc -c test.c
+cc dll.o thread.o test.o -o try

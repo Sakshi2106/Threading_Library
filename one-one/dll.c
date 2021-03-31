@@ -1,5 +1,4 @@
-#include "dll.h"
-
+#include "thread.h"
 
 /*Insert a new node on the front of the list. */
 void add(Node** head, thread_tcb new_tcb)
