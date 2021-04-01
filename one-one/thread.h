@@ -7,6 +7,9 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
 
 
 //Stack size of each thread
@@ -24,6 +27,7 @@
 #define RUNABLE 2
 #define TERMINATED 3
 #define WAITING 4
+#define JOINED 5
 
 typedef struct TCB{
 
@@ -51,6 +55,11 @@ typedef struct TCB{
     /*Pointer to return vaule of start function*/
     void *return_value;
 
+    /*Waiting thread*/
+    struct TCB *waiting_thread;
+
+    int ret_threadexit;
+
 }thread_tcb;
 
 /* Node of a doubly linked list */
@@ -61,10 +70,13 @@ typedef struct Node {
 }Node;
 
 void add(Node** head, thread_tcb new_tcb);
-thread_tcb* removeNodeWithTid(Node** head, int tid);
+Node* removeNodeWithTid(Node** head, int tid);
 thread_tcb* getNodeUsingTid(Node*head, int tid);
+thread_tcb* getNodeUsingPid(Node*head, pid_t pid);
 int isEmpty(Node *head);
 
 int thread_startroutine_execute(void *new_thread);
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg);
 int thread_kill(thread_tcb thread, int sig);
+void thread_exit(void *retval);
+int thread_join(thread_tcb thread, void **retval);

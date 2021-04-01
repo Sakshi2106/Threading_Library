@@ -25,7 +25,7 @@ int isEmpty(Node *head){
 
 
 //Delete node containing given tid value and return that node
-thread_tcb* removeNodeWithTid(Node** head, int tid)
+Node* removeNodeWithTid(Node** head, int tid)
 {
     
     if(*head == NULL){
@@ -37,7 +37,7 @@ thread_tcb* removeNodeWithTid(Node** head, int tid)
        
         if((*head)->tcb.tid == tid){
             //head = NULL;
-            return &(*head)->tcb;
+            return (*head);
         }
     }
 
@@ -47,7 +47,7 @@ thread_tcb* removeNodeWithTid(Node** head, int tid)
         (*head)->next->prev = NULL;
         (*head) = (*head) -> next;
         temp -> next = NULL;
-        return &temp->tcb;
+        return temp;
     }
     
     while(temp -> next != NULL)  {
@@ -56,7 +56,7 @@ thread_tcb* removeNodeWithTid(Node** head, int tid)
            
             temp -> prev -> next = temp -> next;
             temp -> next -> prev = temp -> prev;
-            return &temp->tcb;
+            return temp;
         }
         temp = temp->next;
     }
@@ -64,7 +64,7 @@ thread_tcb* removeNodeWithTid(Node** head, int tid)
     if(temp -> next == NULL){
         temp -> prev -> next = temp -> next;
         temp -> prev = temp -> next;
-        return &temp->tcb;
+        return temp;
     }
 
 }
@@ -75,11 +75,42 @@ thread_tcb* getNodeUsingTid(Node*head, int tid){
 
     Node* temp = head;
    
-    while (temp->tcb.tid != tid && temp->next != NULL) {
+    if(head == NULL)
+        return NULL;
+
+    while (temp->next != NULL) {
+        if(temp->tcb.tid == tid)
+            return &temp->tcb;
+
         temp = temp->next;
     }
  
-    return &temp->tcb;
+    if(temp -> next == NULL){
+        if(temp->tcb.tid == tid)
+            return &temp->tcb;
+    }
+    return NULL;
+}
+
+//Returns node 
+thread_tcb* getNodeUsingPid(Node*head, pid_t pid){
+
+    Node* temp = head;
+    if(head == NULL)
+        return NULL;
+
+    while (temp->next != NULL) {
+        if(temp->tcb.pid == pid)
+            return &temp->tcb;
+
+        temp = temp->next;
+    }
+ 
+    if(temp -> next == NULL){
+        if(temp->tcb.pid == pid)
+            return &temp->tcb;
+    }
+    return NULL;
 }
 
 
