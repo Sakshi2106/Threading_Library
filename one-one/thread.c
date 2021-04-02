@@ -4,16 +4,16 @@
 int thread_count = 1;
 
 Node *head;
-
+thread_tcb *p;
 //Execute the start routine in clone function
 int thread_startroutine_execute(void *new_thread){
-    printf("ENter\n");
-    thread_tcb *p = (thread_tcb*)new_thread;
+   // printf("ENter\n");
+    p = (thread_tcb*)new_thread;
+    p->return_value = p->function(p->arg);
     
-    ((thread_tcb*)new_thread)->return_value = ((thread_tcb*)new_thread)->function(((thread_tcb*)new_thread)->arg);
-    
-    //printf("%d\n", *((int*)p->return_value));
-    return 0;
+    //printf("Sum:%d\n", *(int*)(p->return_value));
+    //thread_exit(p->return_value);
+    //return 0;
 
 }
 
@@ -39,9 +39,11 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
     new_thread -> status = RUNNING;
     new_thread -> ret_threadexit = 0;
     new_thread -> pid = clone(thread_startroutine_execute,  new_thread -> stack + STACK_SIZE, SIGCHLD | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_VM, (void*)new_thread);
+    //sleep(1);
     //printf("New thread with pid: %d\n", new_thread->pid);
     new_thread -> tid = thread_count;
-    printf("%d\n", (int)(new_thread->return_value));
+    //printf("%d\n", *(int*)(new_thread->return_value));
+    //printf("Sum:%d\n", *(int*)(((thread_tcb*)new_thread)->return_value));
     if(new_thread -> pid == -1){
         munmap(new_thread->stack, STACK_SIZE);
         return errno;
@@ -106,18 +108,21 @@ int thread_join(thread_tcb thread, void **retval){
        
         waitpid(thread.pid, &status, 0);
        
+        thread_tcb *req = getNodeUsingTid(head, thread.tid);
         Node *thread_removed = removeNodeWithTid(&head, thread.tid);
-        
+        //printf("%d\n", req->ret_threadexit);
         if(retval != NULL){
             if(thread_removed != NULL){
-                if(thread_removed->tcb.ret_threadexit == 0){
                 
-                    *retval = &(thread_removed->tcb.return_value);
-                    
+                if(req->ret_threadexit == 0){
+                    //printf("Sum:%d\n", *(int*)(p->return_value));
+                    //  printf("Sum:%d\n", *(int*)(req->return_value));
+                    *retval = (p -> return_value);
+                    //printf("Sum:%d\n", **(int**)(retval));
                 }
-                else if(thread_removed->tcb.ret_threadexit == 1){
+                else if(req->ret_threadexit == 1){
                 
-                    *retval = (thread_removed->tcb.return_value);
+                    *retval = (req->return_value);
                 
                 }
             }
