@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
-
+#include "lock.h"
 
 
 //Stack size of each thread
