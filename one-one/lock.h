@@ -1,5 +1,5 @@
-#define LOCKED 1
-#define UNLOCKED 2
+#define LOCKED 0
+#define UNLOCKED 1
 
 typedef struct thread_spinlock{
 
@@ -10,9 +10,10 @@ typedef struct thread_spinlock{
     int lock_state;
 
     int flag;
+
 }thread_spinlock;
 
-int thread_init(thread_spinlock *lock);
-int thread_destroy(thread_spinlock *lock);
+int thread_spin_init(thread_spinlock *lock);
+int thread_spin_destroy(thread_spinlock *lock);
 int thread_spin_lock(thread_spinlock *lock);
 int thread_spin_unlock(thread_spinlock *lock);
