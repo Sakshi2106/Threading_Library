@@ -3,15 +3,18 @@
 
 int thread_count = 1;
 
+static int islock = 0;
 Node *head;
 thread_tcb *p;
 //Execute the start routine in clone function
 int thread_startroutine_execute(void *new_thread){
    // printf("ENter\n");
     p = (thread_tcb*)new_thread;
-    p->return_value = p->function(p->arg);
     
-    //printf("Sum:%d\n", *(int*)(p->return_value));
+    (p)->return_value = (p)->function((p)->arg);
+    
+    //printf("Sum:%d\n", *(int*)((p)->return_value));
+   
     //thread_exit(p->return_value);
     //return 0;
 
@@ -20,7 +23,9 @@ int thread_startroutine_execute(void *new_thread){
 //Thread create function for creating thread
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg){
 
+    lock(&islock);
     thread_tcb *new_thread = (thread_tcb*)malloc(sizeof(thread_tcb));
+   
     if(new_thread == NULL){
 		printf("Memory allocation error\n");
 		exit(0);
@@ -34,15 +39,16 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
     new_thread -> function = start_routine;
     new_thread -> arg = arg;
     new_thread -> detach_state = JOINABLE;
-    //new_thread -> return_value = NULL;
+    new_thread -> return_value = NULL;
     new_thread -> waiting_thread = NULL;
     new_thread -> status = RUNNING;
     new_thread -> ret_threadexit = 0;
-    new_thread -> pid = clone(thread_startroutine_execute,  new_thread -> stack + STACK_SIZE, SIGCHLD | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_VM, (void*)new_thread);
+    new_thread -> pid = clone(thread_startroutine_execute,  new_thread -> stack + STACK_SIZE, SIGCHLD | CLONE_FS | 
+                            CLONE_FILES | CLONE_SIGHAND | CLONE_VM, (void*)new_thread);
     //sleep(1);
     //printf("New thread with pid: %d\n", new_thread->pid);
     new_thread -> tid = thread_count;
-    //printf("%d\n", *(int*)(new_thread->return_value));
+    //printf("Adrr:%d\n", *(int*)(new_thread->return_value));
     //printf("Sum:%d\n", *(int*)(((thread_tcb*)new_thread)->return_value));
     if(new_thread -> pid == -1){
         munmap(new_thread->stack, STACK_SIZE);
@@ -51,6 +57,8 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
     add(&head, *new_thread);
     *thread = *new_thread;
     thread_count++; 
+    fflush(stdout);
+    unlock(&islock);
     return 0;
 }
 
@@ -66,9 +74,9 @@ int thread_kill(thread_tcb thread, int sig){
 }
 
 void thread_exit(void *retval){
-  
+    lock(&islock);
     pid_t cur_pid = getpid();
-    
+    unlock(&islock);
     thread_tcb  *thread = getNodeUsingPid(head, cur_pid);
    
     thread -> return_value = retval;
@@ -77,16 +85,17 @@ void thread_exit(void *retval){
    
     kill(cur_pid, SIGKILL);
     
-   // munmap(thread->stack, STACK_SIZE);
-    //thread -> stack = NULL;
+    munmap(thread->stack, STACK_SIZE);
+    thread -> stack = NULL;
     
 }
 
 int thread_join(thread_tcb thread, void **retval){
     
     int status;
+    lock(&islock);
     pid_t curr_pid = getpid();
-    
+    unlock(&islock);
     thread_tcb *curr_thread = getNodeUsingPid(head, curr_pid);
 
     if(thread.detach_state == DETACHED)
@@ -104,7 +113,7 @@ int thread_join(thread_tcb thread, void **retval){
    
     if(thread.detach_state == JOINABLE){
         thread.status == JOINED;
-        thread.waiting_thread = &curr_thread;
+        thread.waiting_thread = curr_thread;
        
         waitpid(thread.pid, &status, 0);
        
@@ -117,7 +126,7 @@ int thread_join(thread_tcb thread, void **retval){
                 if(req->ret_threadexit == 0){
                     //printf("Sum:%d\n", *(int*)(p->return_value));
                     //  printf("Sum:%d\n", *(int*)(req->return_value));
-                    *retval = (p -> return_value);
+                    *retval = ((p) -> return_value);
                     //printf("Sum:%d\n", **(int**)(retval));
                 }
                 else if(req->ret_threadexit == 1){

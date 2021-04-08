@@ -33,3 +33,6 @@ int thread_mutex_init(thread_mutex *lock);
 int thread_mutex_destroy(thread_mutex *lock);
 int thread_mutex_lock(thread_mutex *lock);
 int thread_mutex_unlock(thread_mutex *lock);
+
+void lock(int *flag);
+void unlock(int *flag);

@@ -190,3 +190,17 @@ int thread_mutex_unlock(thread_mutex *lock){
     thread_wake(&(lock->flag));
     return 0;
 }
+
+//Locks for library synchronization
+
+void lock(int *flag){
+
+    const int locked = 0;
+    while(atomic_compare_exchange_strong(flag, &locked, 1));
+}
+
+void unlock(int *flag){
+    
+    const int unlocked = 1;
+    atomic_compare_exchange_strong(flag, &unlocked, 0);
+}
