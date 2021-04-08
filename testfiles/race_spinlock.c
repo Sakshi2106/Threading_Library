@@ -32,5 +32,5 @@ int main() {
     
 	fprintf(stdout, "c = %ld c1+c2 = %ld c1 = %ld c2 = %ld \n", c, c1+c2, c1, c2);
 	fflush(stdout);
-   
+   	
 }

@@ -10,6 +10,9 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdatomic.h>
+#include <sys/syscall.h>
+#include <linux/futex.h>
+#include <sys/time.h>
 #include "lock.h"
 
 
