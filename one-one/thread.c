@@ -76,9 +76,9 @@ int thread_kill(thread_tcb thread, int sig){
 void thread_exit(void *retval){
     lock(&islock);
     pid_t cur_pid = getpid();
-    unlock(&islock);
     thread_tcb  *thread = getNodeUsingPid(head, cur_pid);
-   
+    unlock(&islock);
+    
     thread -> return_value = retval;
     thread -> status = TERMINATED;
     thread -> ret_threadexit = 1;
@@ -95,7 +95,7 @@ int thread_join(thread_tcb thread, void **retval){
     int status;
     lock(&islock);
     pid_t curr_pid = getpid();
-    unlock(&islock);
+   
     thread_tcb *curr_thread = getNodeUsingPid(head, curr_pid);
 
     if(thread.detach_state == DETACHED)
@@ -114,11 +114,13 @@ int thread_join(thread_tcb thread, void **retval){
     if(thread.detach_state == JOINABLE){
         thread.status == JOINED;
         thread.waiting_thread = curr_thread;
-       
+        unlock(&islock);
         waitpid(thread.pid, &status, 0);
-       
+
+        lock(&islock);
         thread_tcb *req = getNodeUsingTid(head, thread.tid);
         Node *thread_removed = removeNodeWithTid(&head, thread.tid);
+        unlock(&islock);
         //printf("%d\n", req->ret_threadexit);
         if(retval != NULL){
             if(thread_removed != NULL){
@@ -137,8 +139,9 @@ int thread_join(thread_tcb thread, void **retval){
             }
             
         }
-       
+        lock(&islock);
         thread_count--;
+        unlock(&islock);
         free(thread_removed);
         return 0;
     }    
