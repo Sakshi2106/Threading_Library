@@ -20,7 +20,7 @@
 #define STACK_SIZE 1024*32
 
 /*Maximum threads per process*/
-#define MAX_THREADS 20
+#define MAX_THREADS 100
 
 /*For thread state*/
 #define JOINABLE 1
