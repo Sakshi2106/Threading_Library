@@ -1,25 +1,38 @@
+
 #include "thread.h"
-#include "queue.h"
 
 thread_tcb *current_thread;
 
 int thread_count = 0;
 
 queue *allthreads;
-struct itimerval timer;
+//struct itimerval timer;
 
 void block_interrupt() {
     sigset_t block;
     sigemptyset(&block);
-    sigaddset(&block, SIGVTALRM);
-    sigprocmask(SIG_BLOCK, &block, NULL);
+    sigaddset(&block, SIGALRM);
+    int ret = sigprocmask(SIG_BLOCK, &block, NULL);
+    
 }
 
 void unblock_interrupt(){
     sigset_t block;
     sigemptyset(&block);
-    sigaddset(&block, SIGVTALRM);
+    sigaddset(&block, SIGALRM);
     sigprocmask(SIG_UNBLOCK, &block, NULL);
+}
+
+void cleanup(void){
+    
+    struct itimerval timer = {
+			{ 0, 0 },
+			{ 0, 0 }
+		};
+		
+	setitimer(ITIMER_REAL, &timer, 0);
+	free(current_thread);
+	thread_count = 0;	
 }
 
 void thread_init() {
@@ -27,7 +40,9 @@ void thread_init() {
     allthreads = (queue *)malloc(sizeof(queue));
     if(allthreads == NULL)
         return;
-   
+    
+    atexit(cleanup);
+
     init_queue(allthreads);
 
     thread_tcb *main_thread = (thread_tcb *)malloc(sizeof(thread_tcb));
@@ -44,10 +59,11 @@ void thread_init() {
     main_thread -> return_value = NULL;
     main_thread -> waiting_thread_tid = -1;
 
-    sigemptyset(main_thread -> pending_signals);
+    sigemptyset(&(main_thread -> pending_signals));
 
     current_thread = main_thread;
-    thread_count ++;    
+    thread_count ++;
+    init_timer();
 
 }
 
@@ -56,26 +72,25 @@ void init_timer(){
     sigset_t blocked_mask;
     sigfillset(&blocked_mask);
     
-
-    const struct sigaction sigalarm_handler = {
-        .sa_handler = &scheduler,
-		.sa_mask = blocked_mask,
-		.sa_flags = SA_RESTART
-    }
-
-    struct sigaction *old;
-
-    sigaction(SIGVTALRM, &sigalarm_handler, old);
+    struct sigaction sigalarm_handler;
+    memset(&sigalarm_handler, 0, sizeof(sigalarm_handler));
+    sigalarm_handler.sa_handler = scheduler;
+	sigalarm_handler.sa_mask = blocked_mask;
+	sigalarm_handler.sa_flags = 0;
+   
     
-    timer = {
-		{ 0, 10 },	
-		{ 0, 1 }	
-	};
+    struct sigaction *old;
+   
+    int ret = sigaction(SIGALRM, &sigalarm_handler, NULL);
+  
+    struct itimerval timer;
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 100;
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_usec = 100;
 	/*Enabling timer*/
-	if (setitimer(ITIMER_VIRTUAL, &timer, NULL) == - 1) {
-		sigaction(SIGVTALRM, old, NULL);
-	}
-	
+	int q = setitimer(ITIMER_REAL, &timer, 0);
+   
 }
 
 thread_tcb *next_ready_thread(queue *q){
@@ -90,53 +105,54 @@ thread_tcb *next_ready_thread(queue *q){
 }
 
 void scheduler(){
-
+   
     if(setjmp(current_thread -> context)){
+       
+       
         for(int i = 0; i < NSIG; i++){
-            if(sigismember(&(current->pending_signals), i)) {
+            if(sigismember(&(current_thread->pending_signals), i)) {
                 raise(i);
-                sigdelset(&(current->pending_signals), i);
+                sigdelset(&(current_thread->pending_signals), i);
             }
         }
-        return;
+       return;
     }
         
 
-    if(current_thread -> state == RUNNING)
-        current_thread -> state = READY;
+    if(current_thread -> status == RUNNING)
+        current_thread -> status = READY;
 
     enqueue(allthreads, current_thread); 
-
+    
     current_thread = next_ready_thread(allthreads);
+    
     if(current_thread == NULL)
         return;
 
-    current_thread -> state = RUNNING;
-
+    current_thread -> status = RUNNING;
+   
     sigset_t all;
     sigfillset(&all);
     sigprocmask(SIG_UNBLOCK, &all, NULL);
-
-    longjmp(current_thread -> current, 1);
+    longjmp(current_thread -> context, 1);
 
 }
 
-void thread_startroutine_execute(void *new_thread){
-    ((thread_tcb*)new_thread)->return_value = ((thread_tcb*)new_thread)->function(((thread_tcb*)new_thread)->arg);
+void thread_startroutine_execute(void ){
+    
+    current_thread->return_value = current_thread->function(current_thread->arg);
+    thread_exit(current_thread->return_value);
+    return;
 }
 
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg){
-
+   
+    block_interrupt();
     if(thread == NULL)
         return EAGAIN;
 
     if(thread_count > MAX_THREADS)
         return EAGAIN;
-
-    if(thread_count == 0){
-        thread_init();
-        init_timer();
-    }
 
     thread_tcb *new_thread = (thread_tcb*)malloc(sizeof(thread_tcb));
    
@@ -145,7 +161,7 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
 		exit(0);
 	}
    
-    block_interrupt();
+    
 	new_thread -> stack = mmap(NULL, STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
 	if(new_thread -> stack == MAP_FAILED){
 		printf("Memory allocation error\n");
@@ -157,19 +173,36 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
     new_thread -> detach_state = JOINABLE;
     new_thread -> return_value = NULL;
     new_thread -> waiting_thread_tid = -1;
-    new_thread -> status = RUNNING;
+    new_thread -> status = READY;
     new_thread -> tid = thread_count;
-    sigemptyset(new_thread -> pending_signals);
+    sigemptyset(&(new_thread -> pending_signals));
 
     setjmp(new_thread->context);
-
+    
     new_thread->context[0].__jmpbuf[JB_RSP] = i64_ptr_mangle((long int) new_thread->stack + STACK_SIZE - sizeof(long int));
    
 	new_thread->context[0].__jmpbuf[JB_PC] = i64_ptr_mangle((long int) thread_startroutine_execute);
-
     enqueue(allthreads, new_thread);
     *thread = *new_thread;
 
+    
+    
     unblock_interrupt();
+    //raise(SIGVTALRM);
     return 0;
+}
+
+void thread_exit(void *retval){
+    block_interrupt();
+
+    current_thread->status  = TERMINATED;
+    current_thread->return_value = retval;
+
+    if(current_thread->waiting_thread_tid != -1) {
+        thread_tcb *waiting_thread = search_with_tid(allthreads, current_thread->waiting_thread_tid);
+        waiting_thread->status   = READY;
+    }
+
+    unblock_interrupt();
+    raise(SIGALRM);
 }

@@ -1,4 +1,4 @@
-#include "queue.h"
+#include "thread.h"
 
 int init_queue(queue *p){
    
