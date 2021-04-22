@@ -61,7 +61,7 @@ typedef struct TCB{
     sigset_t pending_signals;
 
     /*Context of thread*/
-    sigjmp_buf context;
+    jmp_buf context;
 }thread_tcb;
 
 typedef struct Node {
@@ -105,3 +105,4 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
 int thread_kill(thread_tcb thread, int sig);
 void thread_exit(void *retval);
 int thread_join(thread_tcb thread, void **retval);
+void thread_yeild(void);

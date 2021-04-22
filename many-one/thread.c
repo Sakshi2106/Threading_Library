@@ -4,8 +4,9 @@
 thread_tcb *current_thread;
 
 int thread_count = 0;
-
+jmp_buf env;
 queue *allthreads;
+long retvalue_array[MAX_THREADS];
 //struct itimerval timer;
 
 void block_interrupt() {
@@ -21,10 +22,12 @@ void unblock_interrupt(){
     sigemptyset(&block);
     sigaddset(&block, SIGALRM);
     sigprocmask(SIG_UNBLOCK, &block, NULL);
+    
 }
 
 void cleanup(void){
-    
+    //block_interrupt();
+   
     struct itimerval timer = {
 			{ 0, 0 },
 			{ 0, 0 }
@@ -32,7 +35,18 @@ void cleanup(void){
 		
 	setitimer(ITIMER_REAL, &timer, 0);
 	free(current_thread);
-	thread_count = 0;	
+    
+    thread_tcb *p;
+    int n = allthreads -> count;
+    for(int i = 0; i < n; i++){
+        p = dequeue(allthreads);
+        munmap(p -> stack, STACK_SIZE);
+        p -> stack = NULL;
+        free(p);
+    }
+    thread_count = 0;
+    free(allthreads);
+		
 }
 
 void thread_init() {
@@ -84,21 +98,26 @@ void init_timer(){
     int ret = sigaction(SIGALRM, &sigalarm_handler, NULL);
   
     struct itimerval timer;
-    timer.it_interval.tv_sec = 0;
-    timer.it_interval.tv_usec = 100;
+    timer.it_interval.tv_sec =0 ;
+    timer.it_interval.tv_usec =10;
     timer.it_value.tv_sec = 0;
-    timer.it_value.tv_usec = 100;
+    timer.it_value.tv_usec = 10;
 	/*Enabling timer*/
 	int q = setitimer(ITIMER_REAL, &timer, 0);
    
 }
 
 thread_tcb *next_ready_thread(queue *q){
+    
     thread_tcb *tmp ;
     for(int i = 0; i < (q->count); i++){
         tmp = dequeue(q);
-        if(tmp -> status == READY)
+       
+        if(tmp -> status == READY){
+            
             return tmp;
+        }
+            
         enqueue(q, tmp);
     }
     return NULL;
@@ -106,43 +125,57 @@ thread_tcb *next_ready_thread(queue *q){
 
 void scheduler(){
    
+  
     if(setjmp(current_thread -> context)){
-       
-       
-        for(int i = 0; i < NSIG; i++){
-            if(sigismember(&(current_thread->pending_signals), i)) {
-                raise(i);
-                sigdelset(&(current_thread->pending_signals), i);
-            }
-        }
-       return;
+        
+        // sigset_t all;
+        // sigfillset(&all);
+        // sigprocmask(SIG_UNBLOCK, &all, NULL);
+
+        // for(int i = 0; i < NSIG; i++){
+        //     if(sigismember(&(current_thread->pending_signals), i)) {
+        //         raise(i);
+        //         sigdelset(&(current_thread->pending_signals), i);
+        //     }
+        // }
+
+        return ;
     }
         
-
-    if(current_thread -> status == RUNNING)
-        current_thread -> status = READY;
-
-    enqueue(allthreads, current_thread); 
     
+    if(current_thread -> status != TERMINATED){
+        
+         current_thread -> status = READY;
+    }
+    
+    enqueue(allthreads, current_thread);
+   
     current_thread = next_ready_thread(allthreads);
     
-    if(current_thread == NULL)
-        return;
-
+    if(current_thread == NULL){
+        exit(0);
+    }
+    
     current_thread -> status = RUNNING;
    
-    sigset_t all;
-    sigfillset(&all);
-    sigprocmask(SIG_UNBLOCK, &all, NULL);
     longjmp(current_thread -> context, 1);
 
 }
 
 void thread_startroutine_execute(void ){
+    block_interrupt();
     
     current_thread->return_value = current_thread->function(current_thread->arg);
+
+    retvalue_array[current_thread->tid - 1] = (long int)(current_thread->return_value);
+    
+    printf("address: %p\n", &current_thread->return_value);
+    printf("%d\n", *(int*)current_thread->return_value);
     thread_exit(current_thread->return_value);
+    //printf("%d\n", *(int*)current_thread->return_value);
+    unblock_interrupt();
     return;
+    
 }
 
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg){
@@ -161,13 +194,13 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
 		exit(0);
 	}
    
-    
+   
 	new_thread -> stack = mmap(NULL, STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
 	if(new_thread -> stack == MAP_FAILED){
 		printf("Memory allocation error\n");
 		exit(0);
 	}
-
+    
     new_thread -> function = start_routine;
     new_thread -> arg = arg;
     new_thread -> detach_state = JOINABLE;
@@ -184,25 +217,93 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
 	new_thread->context[0].__jmpbuf[JB_PC] = i64_ptr_mangle((long int) thread_startroutine_execute);
     enqueue(allthreads, new_thread);
     *thread = *new_thread;
-
-    
+   
+    thread_count++;
     
     unblock_interrupt();
-    //raise(SIGVTALRM);
+   
     return 0;
 }
 
 void thread_exit(void *retval){
     block_interrupt();
-
+    
     current_thread->status  = TERMINATED;
     current_thread->return_value = retval;
-
+   
+    printf("%d\n", *(int*)retval);
     if(current_thread->waiting_thread_tid != -1) {
+       
         thread_tcb *waiting_thread = search_with_tid(allthreads, current_thread->waiting_thread_tid);
         waiting_thread->status   = READY;
     }
-
+    
     unblock_interrupt();
+    raise(SIGALRM);
+}
+
+int thread_join(thread_tcb thread, void **retval){
+  
+    block_interrupt();
+    int status;
+ 
+    if(thread.detach_state == DETACHED){
+        
+        unblock_interrupt();
+        return EINVAL;
+    }
+   
+    if(thread.tid == (current_thread -> waiting_thread_tid)){
+       
+        unblock_interrupt();
+        return EDEADLK;
+    }
+    
+    if(thread.waiting_thread_tid != -1){
+       
+        unblock_interrupt();
+        return EINVAL;
+    }
+   
+    thread_tcb *joined_thread = search_with_tid(allthreads, thread.tid);
+    if(joined_thread == NULL)
+        return ESRCH;
+
+    if(thread.detach_state == JOINABLE){
+       
+        thread.waiting_thread_tid = current_thread -> tid;
+        current_thread -> status = WAITING;
+        //printf("joined thread: %d\n", joined_thread->tid);
+        
+        unblock_interrupt();
+       
+        while(joined_thread->status != TERMINATED);
+    
+    
+        block_interrupt();
+       // printf("%d\n", thread.tid);
+       // printf("return value: %d\n", *(int*)retvalue_array[thread.tid-1]);
+        if(retval){
+            *retval = (void*)(retvalue_array[thread.tid-1]);
+        }
+       
+    }  
+    unblock_interrupt();  
+    return 0;
+}
+
+int thread_kill(thread_tcb thread, int sig){
+    block_interrupt();
+    if(sig < 0 || sig > 64)
+        return EINVAL;
+    
+    if(thread.tid != current_thread->tid )
+        raise(sig);
+    
+    unblock_interrupt();
+    return 0;
+}
+
+void thread_yeild(void){
     raise(SIGALRM);
 }

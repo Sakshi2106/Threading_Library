@@ -57,6 +57,7 @@ int isempty(queue *p){
 }
 
 thread_tcb *search_with_tid(queue *p, int id){
+    
     if(p -> head == NULL)
         return NULL;
 
@@ -78,6 +79,7 @@ void print_queue(queue *p){
     Node *tmp = p -> head;
     while(tmp){
         printf("Tid: %d\n", tmp->thread->tid);
+        printf("Status: %d\n", tmp->thread->status);
         tmp = tmp -> next;
     }
 }
