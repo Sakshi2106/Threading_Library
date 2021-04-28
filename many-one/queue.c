@@ -12,19 +12,22 @@ int init_queue(queue *p){
 
 //enqueue thread in queue
 void enqueue(queue *p, thread_tcb *t){
-
+   
     Node *tmp = malloc(sizeof(Node));
     tmp -> thread = t;
     tmp -> next = NULL;
-
+    
     if(p -> tail == NULL){
+        
        p -> head = tmp;
        p -> tail = tmp;
     }
     else{
+        
         p -> tail -> next  = tmp;
         p -> tail = tmp;
     }
+    
     p -> count += 1;
 }
 
@@ -79,6 +82,7 @@ void print_queue(queue *p){
     Node *tmp = p -> head;
     while(tmp){
         printf("Tid: %d\n", tmp->thread->tid);
+       
         printf("Status: %d\n", tmp->thread->status);
         tmp = tmp -> next;
     }
