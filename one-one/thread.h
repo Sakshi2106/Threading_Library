@@ -60,7 +60,7 @@ typedef struct TCB{
     void *return_value;
 
     /*Waiting thread*/
-    struct TCB *waiting_thread;
+    int waiting_thread_tid;
 
     int ret_threadexit;
 
@@ -78,7 +78,8 @@ Node* removeNodeWithTid(Node** head, int tid);
 thread_tcb* getNodeUsingTid(Node*head, int tid);
 thread_tcb* getNodeUsingPid(Node*head, pid_t pid);
 int isEmpty(Node *head);
-
+void printList(Node* node);
+void thread_init();
 int thread_startroutine_execute(void *new_thread);
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg);
 int thread_kill(thread_tcb thread, int sig);

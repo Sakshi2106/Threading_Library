@@ -118,7 +118,7 @@ thread_tcb* getNodeUsingPid(Node*head, pid_t pid){
 void printList(Node* node)
 {
     while (node != NULL) {
-        printf("%d \n", node->tcb.tid);
+        printf("%d \n", node->tcb.pid);
         node = node->next;
     }
 }
