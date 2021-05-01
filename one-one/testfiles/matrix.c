@@ -1,6 +1,8 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include "thread.h"
 #include <stdlib.h>
+#include <unistd.h>
 
 FILE *fp;
 typedef struct matrix{
@@ -53,6 +55,7 @@ void* mult(void* arr){
 int main(){
     matrix A, B;
     int i, j;
+    chdir("testfiles");
     fp = fopen("matrix.txt", "r");
     fscanf(fp ,"%d %d", &A.x , &A.y);
     int **matrix1 = input(A.x, A.y);

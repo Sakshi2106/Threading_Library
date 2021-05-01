@@ -2,7 +2,7 @@
 #include "thread.h"
 #include <stdlib.h>
 
-
+FILE *fp;
 typedef struct matrix{
     int x;
     int y;
@@ -24,7 +24,7 @@ int **input(int n, int m){
         matrix1[i] = (int *)malloc(m * sizeof(int)); 
     for(i = 0; i < n; i++)
         for(j = 0; j < m; j++)
-            scanf("%d", &matrix1[i][j]);
+            fscanf(fp ,"%d", &matrix1[i][j]);
 
     return matrix1;
 }
@@ -53,10 +53,12 @@ void* mult(void* arr){
 int main(){
     matrix A, B;
     int i, j;
-	thread_init();
-    scanf("%d %d", &A.x , &A.y);
+    chdir("testfiles");
+    thread_init();
+    fp = fopen("matrix.txt", "r");
+    fscanf(fp ,"%d %d", &A.x , &A.y);
     int **matrix1 = input(A.x, A.y);
-    scanf("%d %d", &B.x, &B.y);
+    fscanf(fp ,"%d %d", &B.x, &B.y);
     int **matrix2 = input(B.x, B.y);
     thread_tcb tid[3], tid1;
     matrix row_arr[3];
@@ -106,8 +108,10 @@ int main(){
         }
 
         }
-        
-        printf("\n%d %d\n", A.x, B.y);
+        printf("Matrix Multiplication using multithreading \n");
+        printf("Dimensions of new matrix\n");
+        printf("%d %d\n", A.x, B.y);
+        printf("New Matrix\n");
         for(i = 0; i < A.x; i++){
             for(j = 0; j < B.y; j++)
                 printf("%d\t", result[i][j]);
@@ -117,6 +121,7 @@ int main(){
         freeMatrix(matrix1, A.x);
         freeMatrix(matrix2, B.x);
         freeMatrix(result, A.x);
+        fclose(fp);
     }
     
     return 0;

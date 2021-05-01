@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "thread.h"
 #include <stdio.h>
 #include <string.h>
@@ -99,6 +100,7 @@ int main(){
         check(thread_join(tid, NULL));
         printf("TEST PASSED\n\n");
     }
+    //raise(SIGTSTP);
     printf("....................................\n");
     printf("2] Thread Join\n");
     printf("....................................\n");

@@ -3,6 +3,7 @@
 
 int infinite;
 int *p;
+thread_tcb th1, th2;
 void fail(int retval){
     if(retval != 0){
         printf("Error value : %s\n", strerror(retval));
@@ -72,7 +73,8 @@ void* fun11(void *args){
         thread_join(t3, &ret);
         p = &r;
         return p;
-    }
+}
+
 
 int main(){
 
@@ -109,6 +111,7 @@ int main(){
         check(thread_join(tid2, NULL));
         fail(thread_join(tid2, NULL));
     }
+    
     printf("Test 5: Joining on thread and getting the thread value\n");
     {
         thread_tcb tid3;

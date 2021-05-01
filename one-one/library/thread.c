@@ -90,6 +90,8 @@ int thread_kill(thread_tcb thread, int sig){
 
 void thread_exit(void *retval){
     lock(&islock);
+    if(retval == NULL)
+        return;
     pid_t cur_pid = getpid();
     thread_tcb  *thread = getNodeUsingPid(head, cur_pid);
     unlock(&islock);
@@ -100,8 +102,8 @@ void thread_exit(void *retval){
    
     kill(cur_pid, SIGKILL);
     
-    // munmap(thread->stack, STACK_SIZE);
-    // thread -> stack = NULL;
+    munmap(thread->stack, STACK_SIZE);
+    thread -> stack = NULL;
     
 }
 
@@ -171,6 +173,13 @@ int thread_join(thread_tcb thread, void **retval){
         //free(thread_removed);
         return 0;
     }    
+
+    int thread_sigmask(int how, sigset_t *set, sigset_t *oldset) {
+        /* Set the signal mask */
+        sigprocmask(how, set, oldset);
+        return 0;
+   }
+
     
 }
 

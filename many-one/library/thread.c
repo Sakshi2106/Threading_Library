@@ -303,3 +303,9 @@ int thread_kill(thread_tcb thread, int sig){
 void thread_yeild(void){
     raise(SIGALRM);
 }
+
+int thread_sigmask(int how, sigset_t *set, sigset_t *oldset) {
+        /* Set the signal mask */
+        sigprocmask(how, set, oldset);
+        return 0;
+}
