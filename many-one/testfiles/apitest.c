@@ -1,7 +1,7 @@
 #include "thread.h"
 #include <stdio.h>
 
-int infinite;
+int infinite, run;
 int *p;
 thread_tcb th1, th2;
 void fail(int retval){
@@ -32,6 +32,10 @@ void handler(){
 	infinite = 0;
 }
 
+void handler1(){
+    run = 0;
+}
+
 void *thread1(){
     printf("In THREAD1\n");
     
@@ -52,6 +56,39 @@ void *thread4(){
     int r = 29;
     p = &r;
     return p;
+}
+
+void *thread5(){
+    signal(SIGINT, handler1);
+    run = 1;
+    sigset_t sig;
+    sigemptyset(&sig);
+    sigaddset(&sig, SIGINT);
+    thread_sigmask(SIG_BLOCK, &sig, NULL);
+    raise(SIGINT);
+}
+
+void ret1(){
+    int a = 10;
+    thread_exit(&a);
+}
+void *thread6(){
+    printf("Thread calls function ret1\n");
+    ret1();
+}
+
+void *thread7(){
+    signal(SIGINT, handler1);
+    run = 1;
+    sigset_t sig;
+    sigemptyset(&sig);
+    sigaddset(&sig, SIGINT);
+    printf("Blocking signal SIGINT\n");
+    thread_sigmask(SIG_BLOCK, &sig, NULL);
+    raise(SIGINT);
+    printf("Unblocking signal SIGINT\n");
+    thread_sigmask(SIG_UNBLOCK, &sig, NULL);
+    
 }
 
 void* fun(void *args){
@@ -208,8 +245,63 @@ int main(){
         }
     }
 
+    printf("Test 11: Return Value from the function called in thread\n");
+    {
+        void *value;
+        thread_tcb tid;
+
+        check(thread_create(&tid, thread6, NULL));
+        check(thread_join(tid, &value));
+        printf("Expected return value: %d\n", 10);
+        printf("Actual return value: %d\n", *(int*) value);
+        if(*(int*)value == 10) {
+            printf("TEST PASSED\n\n");
+        }
+        else {
+            printf("TEST FAILED\n\n");
+        }
+    }
+
     printf("-------------------------------------------\n");
-    printf("Test 11: Creating a thread inside thread\n");
+    printf("5] Thread Sigmask\n");
+    printf("-------------------------------------------\n");
+    printf("Test 12: Block signal in thread usinf thread_sigmask\n");
+    {
+       
+        thread_tcb tid;
+
+        check(thread_create(&tid, thread5, NULL));
+        check(thread_join(tid, NULL));
+        printf("Value of run before blocking: %d\n", run);
+        printf("Value of run after blocking: %d\n", run);
+        if(run == 1) {
+            printf("TEST PASSED\n\n");
+        }
+        else {
+            printf("TEST FAILED\n\n");
+        }
+    }
+
+    printf("Test 13: Unblock signal in thread using thread_sigmask\n");
+    {
+        
+        thread_tcb tid;
+
+        check(thread_create(&tid, thread7, NULL));
+        check(thread_join(tid, NULL));
+        printf("Value of run before blocking: 1\n");
+        printf("Value of run after blocking: %d\n", run);
+        if(run == 0) {
+            printf("Thread successfully unblocks the signal\n");
+            printf("TEST PASSED\n\n");
+        }
+        else {
+            printf("TEST FAILED\n\n");
+        }
+    }
+
+    printf("-------------------------------------------\n");
+    printf("Test 14: Creating a thread inside thread\n");
     {
         void *value;
         thread_tcb tid;

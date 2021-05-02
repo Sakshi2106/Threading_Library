@@ -1,5 +1,6 @@
 #!/bin/bash
-
+echo ""
+echo ""
 echo -e "1)----------------------------------RUNNING APITEST TEST-----------------------------"
 echo "./exe/apitest"
 ./exe/apitest

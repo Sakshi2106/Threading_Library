@@ -6,7 +6,7 @@ EXECUTABLE := exe
 CC := gcc
 
 CFLAGS := -I include
-.PHONY: all
+.PHONY: all clean run
 
 SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
@@ -43,3 +43,5 @@ $(EXECUTABLE)/%: $(TEST_DIR)/%.o | $(EXECUTABLE)
 clean: 
 	$(RM) -rf $(EXECUTABLE) $(OBJ_DIR) $(TEST_OBJ)
 
+run:
+	@$(MAKE) && ./test.sh

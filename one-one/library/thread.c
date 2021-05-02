@@ -142,6 +142,11 @@ int thread_join(thread_tcb thread, void **retval){
         unlock(&islock);
         return EINVAL;
     }
+
+    pid_t curr_pid = getpid();
+     
+    if(curr_pid == thread.pid)
+        return EINVAL;
    
     if(thread.detach_state == JOINABLE){
     
@@ -179,7 +184,8 @@ int thread_join(thread_tcb thread, void **retval){
 //Change the signal mask of the calling thread
 int thread_sigmask(int how, sigset_t *set, sigset_t *oldset) {
         // Set the signal mask 
-        sigprocmask(how, set, oldset);
-        return 0;
+       // printf("add: %p\n", set);
+        return sigprocmask(how, set, oldset);
+        
 }
 

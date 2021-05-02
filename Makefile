@@ -9,4 +9,8 @@ clean:
 	cd one-one && $(MAKE) clean
 	cd many-one && $(MAKE) clean
 
-.PHONY: $(SUBDIRS) clean
+run:
+	cd one-one && $(MAKE) run
+	cd many-one && $(MAKE) run
+
+.PHONY: $(SUBDIRS) clean run

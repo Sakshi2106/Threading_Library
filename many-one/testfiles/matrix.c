@@ -52,7 +52,7 @@ void* mult(void* arr){
 
 int main(){
     matrix A, B;
-    int i, j;
+    int i, j, run;
     chdir("testfiles");
     thread_init();
     fp = fopen("matrix.txt", "r");
@@ -113,10 +113,20 @@ int main(){
         printf("%d %d\n", A.x, B.y);
         printf("New Matrix\n");
         for(i = 0; i < A.x; i++){
-            for(j = 0; j < B.y; j++)
-                printf("%d\t", result[i][j]);
-            printf("\n");
+            for(j = 0; j < B.y; j++){
+                if(result[i][j] == 40)
+                    run = 1;
+                else{
+                    run = 0;
+                    break;
+                }
+            }
         }
+
+        if(run == 1)
+            printf("TEST PASSED\n\n");
+        else 
+            printf("TEST FAILED\n\n");
 
         freeMatrix(matrix1, A.x);
         freeMatrix(matrix2, B.x);
