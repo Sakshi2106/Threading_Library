@@ -99,9 +99,9 @@ void init_timer(){
   
     struct itimerval timer;
     timer.it_interval.tv_sec =0 ;
-    timer.it_interval.tv_usec =10000;
+    timer.it_interval.tv_usec =100;
     timer.it_value.tv_sec = 0;
-    timer.it_value.tv_usec = 10000;
+    timer.it_value.tv_usec = 100;
 	/*Enabling timer*/
 	int q = setitimer(ITIMER_REAL, &timer, 0);
    
