@@ -18,7 +18,7 @@ TESTOBJ := $(TESTS:$(TEST_DIR)/%.c=$(TEST_OBJ)/%.o)
 #$(info TESTOBJ is $(TESTOBJ))
 
 EXE := $(addprefix $(EXECUTABLE)/, $(notdir $(basename $(TESTS))))
-$(info EXE is $(EXE))
+#$(info EXE is $(EXE))
 
 all : $(OBJ) $(TESTOBJ) $(EXE)
 
