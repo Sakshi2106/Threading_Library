@@ -32,10 +32,10 @@ $(EXECUTABLE):
 	mkdir -p $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -Wall -Wno-return-type -c $< -o $@
 
 $(TEST_OBJ)/%.o: $(TEST_DIR)/%.c | $(TEST_OBJ)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -Wall -Wno-return-type -c $< -o $@
 
 $(EXECUTABLE)/%: $(TEST_DIR)/%.o | $(EXECUTABLE)
 	$(CC)  $(OBJ) $^ $(LDLIBS) -o $@

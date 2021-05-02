@@ -57,7 +57,8 @@ void *thread4(){
     int r = 29;
     thread_tcb t3;
     while(infinite);
-    
+    thread_create(&t3, thread3, NULL);
+    thread_join(t3, NULL);
     int *p = &r;
     return p;
 }

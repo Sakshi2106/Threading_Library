@@ -6,17 +6,20 @@ long retvalue_array[MAX_THREADS];
 static int islock = 0;
 Node *head;
 
-//Execute the start routine in clone function
+//Wrapper function around user start_routine function
 int thread_startroutine_execute(void *new_thread){
 
     lock(&islock);
+    //getting return value from function
     ((thread_tcb*)new_thread)->return_value = ((thread_tcb*)new_thread)->function(((thread_tcb*)new_thread)->arg);
-   
+
+    //storing return value in array
     retvalue_array[((thread_tcb*)new_thread)->tid - 1] = (long int)(((thread_tcb*)new_thread)->return_value);
-    //thread_exit( ((thread_tcb*)new_thread)->return_value);
     unlock(&islock);
-    
+    return 0;
 }
+
+//free the doubly linked list after execution of main function
 void cleanup(){
     Node *tmp;
     tmp = head;
@@ -29,12 +32,13 @@ void cleanup(){
         free(tmp1);
     }
 }
+
+//initialize the threading library
 void thread_init(){
     atexit(cleanup);
-    // for(int i = 0; i < MAX_THREADS; i++)
-    //     retvalue_array[i] = 0;
-
+   
 }
+
 //Thread create function for creating thread
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg){
 
@@ -49,6 +53,7 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
         return EINVAL;
     }
    
+    //allocate stack to new thread
 	new_thread -> stack = mmap(NULL, STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
 	if(new_thread -> stack == MAP_FAILED){
 		printf("Memory allocation error\n");
@@ -66,9 +71,12 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
     new_thread -> pid = clone(thread_startroutine_execute,  new_thread -> stack + STACK_SIZE, SIGCHLD | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_VM, new_thread);
    
     if(new_thread -> pid == -1){
+        unlock(&islock);
         munmap(new_thread->stack, STACK_SIZE);
         return errno;
     }
+
+    //add new thread in doubly linked list
     add(&head, *new_thread);
     *thread = *new_thread;
     thread_count++; 
@@ -80,14 +88,16 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
 //send given signal to given thread
 int thread_kill(thread_tcb thread, int sig){
 
-    //printf("THread pid: %d\n", thread.pid);
+    //check whether signal is or not
     if(sig < 0 || sig > 64)
         return EINVAL;
+
     if(sig > 0)
         kill(thread.pid, sig);
     return 0;
 }
 
+//Terminates the calling thread
 void thread_exit(void *retval){
     lock(&islock);
     if(retval == NULL)
@@ -104,65 +114,56 @@ void thread_exit(void *retval){
     
     munmap(thread->stack, STACK_SIZE);
     thread -> stack = NULL;
-    
+    return;
 }
 
+//joined with a terminated thread
 int thread_join(thread_tcb thread, void **retval){
     
     int status;
     lock(&islock);
-    pid_t curr_pid = getpid();
     
-    //thread_tcb *curr_thread = getNodeUsingPid(head, curr_pid);
-    // printList(head);
-    
+    //if thread state is detached return EINVAL
     if(thread.detach_state == DETACHED){
         unlock(&islock);
         return EINVAL;
     }
     
-    // if(thread.tid == (curr_thread -> waiting_thread_tid)){
-    //     unlock(&islock);
-    //     return EDEADLK;
-    // }
-  
+    //get the target thread
     thread_tcb *joined_thread = getNodeUsingTid(head, thread.tid);
+    //if target thread not found in doubly linked list return ESRCH
     if(joined_thread == NULL){
         unlock(&islock);
         return ESRCH;
     }
+
+    //if target thread is already joined thread return EINVAL
     if(joined_thread->waiting_thread_tid != -1){
         unlock(&islock);
         return EINVAL;
     }
    
     if(thread.detach_state == JOINABLE){
-       //  printf("..............\n");
-        joined_thread->status == JOINED;
-        //printf("current thread tid: %d\n", curr_thread->tid);
-        //joined_thread->waiting_thread_tid = curr_thread->tid;
-        //printf("..............\n");
+    
         unlock(&islock);
-        int pid = waitpid(thread.pid, &status, 0);
+        //wait till target thread completes its execution
+        waitpid(thread.pid, &status, 0);
         
         lock(&islock);
-        //printf("..............\n");
+        
         thread_tcb *req = getNodeUsingPid(head, thread.pid);
         Node *thread_removed = removeNodeWithTid(&head, thread.tid);
         unlock(&islock);
         
+        //save the return value in retval
         if(retval != NULL){
             if(thread_removed != NULL){
                 
                 if(req->ret_threadexit == 0){
-                  
                     *retval = (void*)(retvalue_array[joined_thread->tid-1]);
-                    //printf("Sum:%d\n", **(int**)(retval));
                 }
                 else if(req->ret_threadexit == 1){
-                   
                     *retval = (req->return_value);
-                    //*retval = (void*)(retvalue_array[thread.tid-1]);
                 }
             }
             
@@ -170,16 +171,15 @@ int thread_join(thread_tcb thread, void **retval){
         lock(&islock);
         thread_count--;
         unlock(&islock);
-        //free(thread_removed);
         return 0;
     }    
+    
+}
 
-    int thread_sigmask(int how, sigset_t *set, sigset_t *oldset) {
-        /* Set the signal mask */
+//Change the signal mask of the calling thread
+int thread_sigmask(int how, sigset_t *set, sigset_t *oldset) {
+        // Set the signal mask 
         sigprocmask(how, set, oldset);
         return 0;
-   }
-
-    
 }
 

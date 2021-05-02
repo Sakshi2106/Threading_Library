@@ -8,16 +8,17 @@ int a;
 jmp_buf env;
 queue *allthreads;
 long retvalue_array[MAX_THREADS];
-//struct itimerval timer;
 
+//blocks the SIGALRM signal
 void block_interrupt() {
     sigset_t block;
     sigemptyset(&block);
     sigaddset(&block, SIGALRM);
-    int ret = sigprocmask(SIG_BLOCK, &block, NULL);
+    sigprocmask(SIG_BLOCK, &block, NULL);
     
 }
 
+//unblocks the SIGALRM signal
 void unblock_interrupt(){
     sigset_t block;
     sigemptyset(&block);
@@ -26,8 +27,9 @@ void unblock_interrupt(){
     
 }
 
+//unmapp the mapped regions and free the queue
 void cleanup(void){
-    //block_interrupt();
+   
     struct itimerval timer = {
 			{ 0, 0 },
 			{ 0, 0 }
@@ -49,6 +51,7 @@ void cleanup(void){
 		
 }
 
+//initialize the threading library and store the context of main thread
 void thread_init() {
 
     allthreads = (queue *)malloc(sizeof(queue));
@@ -57,6 +60,7 @@ void thread_init() {
     
     atexit(cleanup);
 
+    //initialize the queue
     init_queue(allthreads);
 
     thread_tcb *main_thread = (thread_tcb *)malloc(sizeof(thread_tcb));
@@ -81,6 +85,7 @@ void thread_init() {
 
 }
 
+//initialize the timer
 void init_timer(){
 
     sigset_t blocked_mask;
@@ -92,21 +97,20 @@ void init_timer(){
 	sigalarm_handler.sa_mask = blocked_mask;
 	sigalarm_handler.sa_flags = SA_RESTART;
    
-    
-    struct sigaction *old;
-   
-    int ret = sigaction(SIGALRM, &sigalarm_handler, NULL);
+    //set Scheduler as handler
+    sigaction(SIGALRM, &sigalarm_handler, NULL);
   
     struct itimerval timer;
     timer.it_interval.tv_sec =0 ;
     timer.it_interval.tv_usec =100;
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_usec = 100;
-	/*Enabling timer*/
-	int q = setitimer(ITIMER_REAL, &timer, 0);
+	//Enabling timer
+	setitimer(ITIMER_REAL, &timer, 0);
    
 }
 
+//gives the next ready thread in queue
 thread_tcb *next_ready_thread(queue *q){
     
     thread_tcb *tmp ;
@@ -123,9 +127,10 @@ thread_tcb *next_ready_thread(queue *q){
     return NULL;
 }
 
+//Schedules the thread after the timer interrupt
 void scheduler(){
    
-    
+    //store the context of running thread
     if(setjmp(current_thread -> context)){
         
         sigset_t all;
@@ -143,26 +148,25 @@ void scheduler(){
         return ;
     }
         
-    
+    //if state of thread is not terminated change the state to READY
     if(current_thread -> status != TERMINATED){
-        
-         current_thread -> status = READY;
+        current_thread -> status = READY;
     }
     
     enqueue(allthreads, current_thread);
-    
+    //get next ready thread from queue
     current_thread = next_ready_thread(allthreads);
     
     if(current_thread == NULL){
         exit(0);
     }
-    
+    //change the state to RUNNING and restore the context
     current_thread -> status = RUNNING;
-   
     longjmp(current_thread -> context, 1);
 
 }
 
+//Wrapper function around user start_routine function
 void thread_startroutine_execute(void ){
     unblock_interrupt();
     current_thread->return_value = current_thread->function(current_thread->arg);
@@ -170,7 +174,7 @@ void thread_startroutine_execute(void ){
     return;
 }
 
-
+//Creates the new thread
 int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg){
    
     block_interrupt();
@@ -187,7 +191,7 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
 		exit(0);
 	}
    
-   
+    //allocate stack to new thread
 	new_thread -> stack = mmap(NULL, STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
 	if(new_thread -> stack == MAP_FAILED){
 		printf("Memory allocation error\n");
@@ -217,12 +221,14 @@ int thread_create(thread_tcb *thread, void *(*start_routine) (void *), void *arg
     return 0;
 }
 
-
+//Terminates the calling thread
 void thread_exit(void *retval){
    
     block_interrupt();
     current_thread->status  = TERMINATED;
     current_thread->return_value = retval;
+
+    //If any thread is waiting for the terminated thread change the state of that thread to READY and raise SIGALRM
     if(current_thread->waiting_thread_tid != -1) {
        
         thread_tcb *waiting_thread = search_with_tid(allthreads, current_thread->waiting_thread_tid);
@@ -234,26 +240,30 @@ void thread_exit(void *retval){
     
 }
 
-
+//Join with terminated thread
 int thread_join(thread_tcb thread, void **retval){
     block_interrupt();
-    int status;
-
+   
+    //if thread state is detached return EINVAL
     if(thread.detach_state == DETACHED){
-        
         unblock_interrupt();
         return EINVAL;
     }
-   
+    
+    //If there id Deadlock return EDEADLK
     if(thread.tid == (current_thread -> waiting_thread_tid)){
-       
         unblock_interrupt();
         return EDEADLK;
     }
+
+    //search the target thread
     thread_tcb *joined_thread = search_with_tid(allthreads, thread.tid);
-     if(joined_thread == NULL)
+
+    //if target thread not found return ESRCH
+    if(joined_thread == NULL)
         return ESRCH;
 
+    //if target thread is already joined return EINVAL
     if(joined_thread->waiting_thread_tid != -1){
         unblock_interrupt();
         return EINVAL;
@@ -265,9 +275,11 @@ int thread_join(thread_tcb thread, void **retval){
         joined_thread->waiting_thread_tid = current_thread -> tid;
         current_thread -> status = WAITING;
         unblock_interrupt();
+        //wait till target thread status changes to TERMINATED
         while(joined_thread->status != TERMINATED);
         block_interrupt();
        
+        //store the return value
         if(retval){
             *retval = joined_thread->return_value;
         }
@@ -277,7 +289,7 @@ int thread_join(thread_tcb thread, void **retval){
     return 0;
 }
 
-
+//send signal to particular thread
 int thread_kill(thread_tcb thread, int sig){
     block_interrupt();
     if(sig < 0 || sig > 64)
@@ -293,19 +305,20 @@ int thread_kill(thread_tcb thread, int sig){
         unblock_interrupt();
         return EINVAL;
     }
-
+    //store pending signals
     sigaddset(&target_thread->pending_signals, sig);
     unblock_interrupt();
     return 0;
 }
 
-
+//Yields the processor
 void thread_yeild(void){
     raise(SIGALRM);
 }
 
+//Change the signal mask of calling thread
 int thread_sigmask(int how, sigset_t *set, sigset_t *oldset) {
-        /* Set the signal mask */
-        sigprocmask(how, set, oldset);
-        return 0;
+    // Set the signal mask 
+    sigprocmask(how, set, oldset);
+    return 0;
 }

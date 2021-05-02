@@ -52,6 +52,7 @@ thread_tcb * dequeue(queue *p){
     }
 }
 
+//checks whether queue is empty
 int isempty(queue *p){
     if(p -> head == NULL && p -> tail ==NULL ){
         return 1;
@@ -59,6 +60,7 @@ int isempty(queue *p){
     return 0;
 }
 
+//search thread with given tid in queue
 thread_tcb *search_with_tid(queue *p, int id){
     
     if(p -> head == NULL)
@@ -102,46 +104,3 @@ void cleanup_queue(queue *p){
     p -> count = 0;
     return;
 }
-
-// int main(){
-//     queue *ready;
-//     ready = (queue *)malloc(sizeof(queue));
-   
-//     init_queue(ready);
-  
-//     thread_tcb p;
-//     p.tid = 1;
-
-//     enqueue(ready, &p);
-//     print_queue(ready);
-//     thread_tcb q;
-//     q.tid = 2;
-
-//     enqueue(ready, &q);
-
-//     thread_tcb r;
-//     r.tid = 3;
-
-//     enqueue(ready, &r);
-
-//     print_queue(ready);
-//     printf("Dequeue\n");
-//     thread_tcb * x = dequeue(ready);
-
-//     printf("node: %d", x->tid);
-
-//     print_queue(ready);
-
-//     thread_tcb n ;
-//     n.tid = 4;
-//     enqueue(ready, &n);
-
-//     print_queue(ready);
-     
-//     thread_tcb *a = search_with_tid(ready, 2);
-
-//     printf("Tid found: %d\n", a->tid);
-
-//    return 0;
-    
-// }
