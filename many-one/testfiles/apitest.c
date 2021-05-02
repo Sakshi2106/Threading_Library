@@ -265,24 +265,9 @@ int main(){
     printf("-------------------------------------------\n");
     printf("5] Thread Sigmask\n");
     printf("-------------------------------------------\n");
-    printf("Test 12: Block signal in thread usinf thread_sigmask\n");
-    {
-       
-        thread_tcb tid;
+    
 
-        check(thread_create(&tid, thread5, NULL));
-        check(thread_join(tid, NULL));
-        printf("Value of run before blocking: %d\n", run);
-        printf("Value of run after blocking: %d\n", run);
-        if(run == 1) {
-            printf("TEST PASSED\n\n");
-        }
-        else {
-            printf("TEST FAILED\n\n");
-        }
-    }
-
-    printf("Test 13: Unblock signal in thread using thread_sigmask\n");
+    printf("Test 12: Unblock signal in thread using thread_sigmask\n");
     {
         
         thread_tcb tid;
@@ -301,7 +286,7 @@ int main(){
     }
 
     printf("-------------------------------------------\n");
-    printf("Test 14: Creating a thread inside thread\n");
+    printf("Test 13: Creating a thread inside thread\n");
     {
         void *value;
         thread_tcb tid;

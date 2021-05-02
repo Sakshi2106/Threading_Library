@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int infinite, run;
+int infinite, run, mask;
 int *p;
 void fail(int retval){
     if(retval != 0){
@@ -21,10 +21,11 @@ void pass(int retval){
         printf("TEST FAILED\n\n");
 }
 
-void check(int retval){
+int check(int retval){
     if(retval != 0){
         printf("Error value : %s\n\n", strerror(retval));
     }
+    return retval;
 }
 
 
@@ -50,9 +51,10 @@ void *thread2(){
 }
 
 void *thread3(){
-    printf("In THREAD2\n");
+    
     int r = 1;
     p = &r;
+    
     return p;
 }
 
@@ -98,6 +100,11 @@ void ret1(){
 void *thread6(){
     printf("Thread calls function ret1\n");
     ret1();
+}
+
+void *thread8(){
+    mask = 1;
+    while(mask);
 }
 
 void* fun(void *args){
@@ -175,11 +182,11 @@ int main(){
         thread_tcb tid[5];
         for(int i = 0; i < 5; i++) {
             check(thread_create(&tid[i], thread3, NULL));
-            printf("Thread %d created\n", i);
+            printf("thread %d created\n", i);
         }
         for(int i = 0; i < 5; i++) {
             check(thread_join(tid[i], NULL));
-            printf("Thread %d joined\n", i);
+            printf("thread %d joined\n", i);
         }
         printf( "TEST PASSED\n\n");
     }
@@ -217,10 +224,34 @@ int main(){
            
         }
     }
+
+    printf("Test 9: Checking signal handling for SIGTSTP SIGCONT SIGKILL\n");
+    {
+
+        thread_tcb tid;
+        
+        check(thread_create(&tid, thread8, NULL));
+        printf("Sending SIGTSTP signal\n");
+        check(thread_kill(tid, SIGTSTP));
+        printf("Sending SIGCONT signal\n");
+        check(thread_kill(tid, SIGCONT));
+        printf("Sending SIGKILL signal\n");
+        int ret = check(thread_kill(tid, SIGKILL));
+        if(ret == 0) {
+            printf("TEST PASSED\n\n");
+        }
+        else {
+            printf("TEST FAILED\n\n");
+           
+        }
+        check(thread_join(tid, NULL));
+        
+    }
+
     printf("-------------------------------------------\n");
     printf("4] Thread Exit\n");
     printf("-------------------------------------------\n");
-    printf("Test 9: Return value using thread_exit\n");
+    printf("Test 10: Return value using thread_exit\n");
     {
         void *value;
         thread_tcb tid;
@@ -237,7 +268,7 @@ int main(){
         }
     }
 
-    printf("Test 10: Return value using return\n");
+    printf("Test 11: Return value using return\n");
     {
         void *value;
         thread_tcb tid;
@@ -254,7 +285,7 @@ int main(){
         }
     }
 
-    printf("Test 11: Return Value from the function called in thread\n");
+    printf("Test 12: Return Value from the function called in thread\n");
     {
         void *value;
         thread_tcb tid;
@@ -274,7 +305,7 @@ int main(){
     printf("-------------------------------------------\n");
     printf("5] Thread Sigmask\n");
     printf("-------------------------------------------\n");
-    printf("Test 12: Block signal in thread using thread_sigmask\n");
+    printf("Test 13: Block signal in thread using thread_sigmask\n");
     {
         
         thread_tcb tid;
@@ -292,7 +323,7 @@ int main(){
         }
     }
 
-    printf("Test 13: Unblock signal in thread using thread_sigmask\n");
+    printf("Test 14: Unblock signal in thread using thread_sigmask\n");
     {
         
         thread_tcb tid;
@@ -311,7 +342,7 @@ int main(){
     }
 
     printf("-------------------------------------------\n");
-    printf("Test 14: Creating a thread inside thread\n");
+    printf("Test 15: Creating a thread inside thread\n");
     {
         void *value;
         thread_tcb tid;
