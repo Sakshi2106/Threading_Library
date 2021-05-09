@@ -4,7 +4,7 @@
 <p align="center">
   <h1 align="center">Threading_Library</h1>
   <p align="center">
-    <h3 align="center">A multi-threading library for C Programs</h3>
+    <h3 align="center">A lightweight C library based on one-one and many-one model for threading.</h3>
    
 
 
